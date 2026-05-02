@@ -15,6 +15,9 @@ import numpy as np              # Numerical operations
 import plotly.express as px     # Interactive charts
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -427,6 +430,55 @@ RECOMMENDATIONS = [
 
 
 # ============================================================
+# MACHINE LEARNING MODEL
+# ============================================================
+@st.cache_resource
+def train_churn_model(data):
+    """
+    Train a Random Forest model for churn prediction.
+    Uses caching so the model isn't retrained on every UI interaction.
+    """
+    # 1. DATA PREPARATION FOR ML
+    ml_data = data.copy()
+    
+    # Map back target and binary variables
+    ml_data['Churn Status'] = ml_data['Churn Status'].map({'Yes': 1, 'No': 0})
+    ml_data['Active Member'] = ml_data['Active Member'].map({'Yes': 1, 'No': 0})
+    ml_data['Credit Card'] = ml_data['Credit Card'].map({'Yes': 1, 'No': 0})
+    ml_data['Gender'] = ml_data['Gender'].map({'Male': 1, 'Female': 0})
+    
+    # 2. FEATURE SELECTION
+    features = ['Credit Score', 'Age', 'Tenure', 'Balance', 'Products', 'Credit Card', 'Active Member', 'Gender']
+    
+    # Ensure no missing values remain in features
+    ml_data = ml_data.dropna(subset=features + ['Churn Status'])
+    
+    X = ml_data[features]
+    y = ml_data['Churn Status']
+    
+    # 3. TRAIN-TEST SPLIT
+    # Splitting is necessary to evaluate the model on unseen data to ensure it generalizes well.
+    # We use 80% of data for training and 20% for testing.
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    
+    # 4. RANDOM FOREST MODEL
+    # Initialize and train the Random Forest Classifier
+    rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+    rf_model.fit(X_train, y_train)
+    
+    # 5. MODEL EVALUATION
+    # Make predictions on test data
+    y_pred = rf_model.predict(X_test)
+    
+    # Calculate metrics
+    acc_score = accuracy_score(y_test, y_pred)
+    conf_matrix = confusion_matrix(y_test, y_pred)
+    class_report = classification_report(y_test, y_pred, output_dict=True)
+    
+    return rf_model, acc_score, conf_matrix, class_report, features
+
+
+# ============================================================
 # MAIN APPLICATION
 # ============================================================
 def main():
@@ -689,6 +741,79 @@ def main():
         )
 
     # ---- Footer ----
+    st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
+    
+    # ========================================================
+    # CHURN PREDICTION MODULE
+    # ========================================================
+    # Train the ML model on the cleaned data
+    model, accuracy, conf_matrix, class_report, ml_features = train_churn_model(cleaned_df)
+
+    st.markdown("<p class='section-header'>🔮 Predict Customer Churn</p>", unsafe_allow_html=True)
+    
+    st.markdown("""
+    Use the Machine Learning model (Random Forest) to predict whether a specific customer is likely to churn. 
+    The model was trained automatically on the uploaded dataset.
+    """)
+    
+    # Display model metrics in an expander
+    with st.expander("📊 View Model Performance Metrics"):
+        st.write(f"**Accuracy Score:** {accuracy * 100:.2f}%")
+        st.write("**Classification Report:**")
+        st.dataframe(pd.DataFrame(class_report).transpose())
+        st.write("**Confusion Matrix:**")
+        st.write(conf_matrix)
+
+    # Input form for prediction
+    st.markdown("### Enter Customer Details")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        p_age = st.number_input("Age", min_value=18, max_value=100, value=30)
+        p_credit_score = st.number_input("Credit Score", min_value=300, max_value=850, value=600)
+        p_gender = st.selectbox("Gender", ["Male", "Female"])
+        
+    with col2:
+        p_balance = st.number_input("Balance", min_value=0.0, value=50000.0)
+        p_tenure = st.number_input("Tenure (Years)", min_value=0, max_value=20, value=5)
+        p_products = st.selectbox("Number of Products", [1, 2, 3, 4])
+        
+    with col3:
+        p_credit_card = st.radio("Has Credit Card?", ["Yes", "No"])
+        p_active = st.radio("Is Active Member?", ["Yes", "No"])
+        
+    if st.button("Predict Churn Risk", type="primary"):
+        # Map inputs to match training data
+        input_data = {
+            'Credit Score': p_credit_score,
+            'Age': p_age,
+            'Tenure': p_tenure,
+            'Balance': p_balance,
+            'Products': p_products,
+            'Credit Card': 1 if p_credit_card == "Yes" else 0,
+            'Active Member': 1 if p_active == "Yes" else 0,
+            'Gender': 1 if p_gender == "Male" else 0
+        }
+        
+        # Convert to DataFrame
+        input_df = pd.DataFrame([input_data])
+        
+        # Ensure column order matches exactly
+        input_df = input_df[ml_features]
+        
+        # Make prediction
+        prediction = model.predict(input_df)[0]
+        prob = model.predict_proba(input_df)[0]
+        churn_prob = prob[1] * 100
+        
+        st.markdown("### Prediction Result")
+        
+        if prediction == 1:
+            st.error(f"🚨 **High Risk: This customer is likely to churn.** (Probability: {churn_prob:.1f}%)")
+        else:
+            st.success(f"✅ **Low Risk: This customer is likely to stay.** (Churn Probability: {churn_prob:.1f}%)")
+
     st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
     st.markdown(
         "<p style='text-align:center; color:#556677; font-size:0.85rem;'>"
