@@ -47,16 +47,17 @@ def load_custom_css():
         .main .block-container {
             padding-top: 1.5rem;
             padding-bottom: 2rem;
+            background-color: #0B1120;
         }
 
         /* ---- Header banner ---- */
         .hero-banner {
-            background: linear-gradient(135deg, #FF6B6B 0%, #ee5a24 50%, #f0932b 100%);
+            background: linear-gradient(135deg, #4F46E5 0%, #6366F1 50%, #818CF8 100%);
             padding: 2rem 2.5rem;
             border-radius: 16px;
             margin-bottom: 1.5rem;
             text-align: center;
-            box-shadow: 0 8px 32px rgba(255,107,107,0.25);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
         }
         .hero-banner h1 {
             color: #ffffff;
@@ -71,90 +72,89 @@ def load_custom_css():
             margin-top: 0.4rem;
         }
 
+        /* ---- Buttons ---- */
+        .stButton > button {
+            background-color: #6366F1 !important;
+            color: #ffffff !important;
+            border-radius: 8px !important;
+            border: none !important;
+            font-weight: 600 !important;
+            padding: 0.5rem 1rem !important;
+            transition: all 0.3s ease !important;
+        }
+        .stButton > button:hover {
+            background-color: #4F46E5 !important;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4) !important;
+            transform: translateY(-2px);
+        }
+
         /* ---- KPI metric cards ---- */
         .kpi-card {
-            background: linear-gradient(145deg, #1e2740 0%, #232d42 100%);
-            border: 1px solid rgba(255,255,255,0.06);
+            background: #111827;
+            border: 1px solid rgba(255,255,255,0.05);
             border-radius: 14px;
             padding: 1.5rem;
             text-align: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             transition: transform 0.2s ease;
         }
         .kpi-card:hover {
             transform: translateY(-4px);
+            border-color: rgba(99, 102, 241, 0.3);
         }
         .kpi-icon { font-size: 2rem; margin-bottom: 0.3rem; }
         .kpi-value {
             font-size: 2.2rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #FF6B6B, #f0932b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #E5E7EB;
         }
         .kpi-label {
             font-size: 0.9rem;
-            color: #8899aa;
+            color: #9CA3AF;
             margin-top: 0.2rem;
             text-transform: uppercase;
             letter-spacing: 1px;
+            font-weight: 600;
         }
 
         /* ---- Section headers ---- */
         .section-header {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #FF6B6B;
-            margin-top: 1.5rem;
-            margin-bottom: 0.8rem;
-            border-left: 4px solid #FF6B6B;
+            color: #F9FAFB;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #6366F1;
             padding-left: 12px;
         }
 
-        /* ---- Insight cards ---- */
-        .insight-card {
-            background: #1a2035;
-            border-left: 4px solid #FF6B6B;
+        /* ---- Insight & Rec cards ---- */
+        .insight-card, .rec-card {
+            background: #111827;
+            border-left: 4px solid #6366F1;
             border-radius: 8px;
             padding: 1rem 1.2rem;
             margin-bottom: 0.7rem;
             font-size: 0.95rem;
-            color: #c8d6e5;
+            color: #D1D5DB;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
-
-        /* ---- Recommendation cards ---- */
-        .rec-card {
-            background: linear-gradient(145deg, #1a2035, #1e2740);
-            border-left: 4px solid #f0932b;
-            border-radius: 8px;
-            padding: 1rem 1.2rem;
-            margin-bottom: 0.7rem;
-            font-size: 0.95rem;
-            color: #c8d6e5;
-        }
+        .rec-card { border-left: 4px solid #38BDF8; }
 
         /* ---- Sidebar styling ---- */
         section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #111827 0%, #1a1f2e 100%);
+            background-color: #111827 !important;
+            border-right: 1px solid rgba(255,255,255,0.05);
         }
         section[data-testid="stSidebar"] .block-container {
             padding-top: 1rem;
-        }
-
-        /* ---- Upload area ---- */
-        .upload-box {
-            border: 2px dashed rgba(255,107,107,0.4);
-            border-radius: 12px;
-            padding: 1.5rem;
-            text-align: center;
-            margin-bottom: 1rem;
         }
 
         /* ---- Divider ---- */
         .custom-divider {
             border: none;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,107,107,0.3), transparent);
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.3), transparent);
             margin: 1.5rem 0;
         }
 
@@ -286,8 +286,8 @@ def transform_data(df):
 # ============================================================
 # CHART CREATION HELPERS
 # ============================================================
-CHART_COLORS = ['#FF6B6B', '#f0932b', '#ffd32a', '#6ab04c',
-                '#22a6b3', '#4834d4', '#be2edd', '#eb4d4b']
+CHART_COLORS = ['#6366F1', '#38BDF8', '#818CF8', '#A78BFA',
+                '#2DD4BF', '#F472B6', '#C084FC', '#60A5FA']
 
 
 def create_bar_chart(data, x_col, title):
@@ -296,15 +296,15 @@ def create_bar_chart(data, x_col, title):
     fig = px.bar(
         chart_data, x=x_col, y='Count', color='Churn Status',
         barmode='group', title=title,
-        color_discrete_map={'Yes': '#FF6B6B', 'No': '#22a6b3'},
+        color_discrete_map={'Yes': '#6366F1', 'No': '#38BDF8'},
         text='Count'
     )
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font_color='#c8d6e5',
+        font_color='#E5E7EB',
         title_font_size=16,
-        title_font_color='#FF6B6B',
+        title_font_color='#E5E7EB',
         legend=dict(bgcolor='rgba(0,0,0,0)'),
         margin=dict(t=50, b=40, l=40, r=20),
         xaxis=dict(showgrid=False),
@@ -328,9 +328,9 @@ def create_pie_chart(data, col, title):
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font_color='#c8d6e5',
+        font_color='#E5E7EB',
         title_font_size=16,
-        title_font_color='#FF6B6B',
+        title_font_color='#E5E7EB',
         legend=dict(bgcolor='rgba(0,0,0,0)'),
         margin=dict(t=50, b=20, l=20, r=20)
     )
@@ -557,9 +557,9 @@ def main():
     # The app now auto-fills missing columns.
 
     # ========================================================
-    # DATA PREVIEW – Before Cleaning
+    # DASHBOARD OVERVIEW (Replaces Raw Preview)
     # ========================================================
-    st.markdown("<p class='section-header'>📋 Raw Dataset Preview</p>",
+    st.markdown("<p class='section-header'>📊 Dashboard Overview</p>",
                 unsafe_allow_html=True)
     st.dataframe(raw_df.head(10), use_container_width=True)
     st.caption(f"Shape: {raw_df.shape[0]} rows × {raw_df.shape[1]} columns")
@@ -577,11 +577,6 @@ def main():
         with st.sidebar:
             st.warning(f"⚠️ **Missing columns detected!**\n\nWe auto-generated values for: "
                        f"*{', '.join(gen_cols)}* to make the dashboard work.")
-
-    st.markdown("<p class='section-header'>✨ Cleaned & Transformed Data</p>",
-                unsafe_allow_html=True)
-    st.dataframe(transformed_df.head(10), use_container_width=True)
-    st.caption("Columns renamed • Missing values filled • Groups created")
 
     st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
 
@@ -639,8 +634,6 @@ def main():
     # ========================================================
     # KPI SECTION
     # ========================================================
-    st.markdown("<p class='section-header'>📈 Key Performance Indicators</p>",
-                unsafe_allow_html=True)
 
     total = len(filtered_df)
     if 'Churn Status' in filtered_df.columns:
@@ -685,7 +678,7 @@ def main():
     # ========================================================
     # DASHBOARD CHARTS
     # ========================================================
-    st.markdown("<p class='section-header'>📊 Dashboard Visualisations</p>",
+    st.markdown("<p class='section-header'>📈 Churn Analysis</p>",
                 unsafe_allow_html=True)
 
     if 'Churn Status' not in filtered_df.columns:
@@ -747,7 +740,7 @@ def main():
     # ========================================================
     # INSIGHTS SECTION
     # ========================================================
-    st.markdown("<p class='section-header'>💡 Auto-Generated Insights</p>",
+    st.markdown("<p class='section-header'>📌 Insights & Recommendations</p>",
                 unsafe_allow_html=True)
 
     insights = generate_insights(filtered_df)
@@ -759,11 +752,7 @@ def main():
 
     st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
 
-    # ========================================================
-    # RECOMMENDATIONS SECTION
-    # ========================================================
-    st.markdown("<p class='section-header'>🚀 Recommendations</p>",
-                unsafe_allow_html=True)
+    st.markdown("### 🚀 Recommendations", unsafe_allow_html=True)
 
     for icon, title, desc in RECOMMENDATIONS:
         st.markdown(
@@ -777,7 +766,7 @@ def main():
     # ========================================================
     # MACHINE LEARNING & PREDICTION
     # ========================================================
-    st.markdown("<p class='section-header'>🤖 Machine Learning Analysis</p>", unsafe_allow_html=True)
+    st.markdown("<p class='section-header'>🔮 Prediction & Modeling</p>", unsafe_allow_html=True)
     
     # Train the ML models on the cleaned data
     models = train_models(cleaned_df)
@@ -809,10 +798,10 @@ def main():
             'Accuracy': [rf_metrics['accuracy'], knn_metrics['accuracy']]
         })
         fig_comp = px.bar(comp_df, x='Model', y='Accuracy', title='Accuracy Comparison',
-                         color='Model', color_discrete_sequence=['#FF6B6B', '#22a6b3'],
+                         color='Model', color_discrete_sequence=['#6366F1', '#38BDF8'],
                          text=comp_df['Accuracy'].apply(lambda x: f"{x*100:.1f}%"))
         fig_comp.update_layout(yaxis_range=[0, 1], height=300, margin=dict(t=40, b=0, l=0, r=0), 
-                              paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#c8d6e5')
+                              paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#E5E7EB')
         fig_comp.update_traces(textposition='outside')
         st.plotly_chart(fig_comp, use_container_width=True)
 
@@ -880,9 +869,9 @@ def main():
         # Scatter Plot
         fig_cluster = px.scatter(cleaned_df, x='Balance', y='Credit Score', color='Cluster', 
                                  title='Customer Clusters (Balance vs Credit Score)',
-                                 color_discrete_sequence=['#FF6B6B', '#22a6b3', '#f0932b'],
+                                 color_discrete_sequence=['#6366F1', '#38BDF8', '#A78BFA'],
                                  opacity=0.7)
-        fig_cluster.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#c8d6e5')
+        fig_cluster.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#E5E7EB')
         st.plotly_chart(fig_cluster, use_container_width=True)
         
         # Cluster Characteristics
