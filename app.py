@@ -17,6 +17,9 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 import warnings
 warnings.filterwarnings("ignore")
@@ -433,10 +436,9 @@ RECOMMENDATIONS = [
 # MACHINE LEARNING MODEL
 # ============================================================
 @st.cache_resource
-def train_churn_model(data):
+def train_models(data):
     """
-    Train a Random Forest model for churn prediction.
-    Uses caching so the model isn't retrained on every UI interaction.
+    Train Random Forest, KNN, and K-Means models.
     """
     # 1. DATA PREPARATION FOR ML
     ml_data = data.copy()
@@ -447,8 +449,9 @@ def train_churn_model(data):
     ml_data['Credit Card'] = ml_data['Credit Card'].map({'Yes': 1, 'No': 0})
     ml_data['Gender'] = ml_data['Gender'].map({'Male': 1, 'Female': 0})
     
-    # 2. FEATURE SELECTION
+    # 2. FEATURE SELECTION (Country excluded)
     features = ['Credit Score', 'Age', 'Tenure', 'Balance', 'Products', 'Credit Card', 'Active Member', 'Gender']
+    num_features = ['Credit Score', 'Age', 'Tenure', 'Balance', 'Products']
     
     # Ensure no missing values remain in features
     ml_data = ml_data.dropna(subset=features + ['Churn Status'])
@@ -457,25 +460,44 @@ def train_churn_model(data):
     y = ml_data['Churn Status']
     
     # 3. TRAIN-TEST SPLIT
-    # Splitting is necessary to evaluate the model on unseen data to ensure it generalizes well.
-    # We use 80% of data for training and 20% for testing.
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     
-    # 4. RANDOM FOREST MODEL
-    # Initialize and train the Random Forest Classifier
+    # Scaler for KNN and K-Means
+    scaler = StandardScaler()
+    X_train_scaled = X_train.copy()
+    X_test_scaled = X_test.copy()
+    X_scaled_all = X.copy()
+    
+    X_train_scaled[num_features] = scaler.fit_transform(X_train[num_features])
+    X_test_scaled[num_features] = scaler.transform(X_test[num_features])
+    X_scaled_all[num_features] = scaler.transform(X[num_features])
+    
+    # 4. RANDOM FOREST (Unscaled)
     rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
     rf_model.fit(X_train, y_train)
+    rf_pred = rf_model.predict(X_test)
+    rf_metrics = {
+        'accuracy': accuracy_score(y_test, rf_pred),
+        'conf_matrix': confusion_matrix(y_test, rf_pred),
+        'report': classification_report(y_test, rf_pred, output_dict=True)
+    }
     
-    # 5. MODEL EVALUATION
-    # Make predictions on test data
-    y_pred = rf_model.predict(X_test)
+    # 5. KNN (Scaled)
+    knn_model = KNeighborsClassifier(n_neighbors=5)
+    knn_model.fit(X_train_scaled, y_train)
+    knn_pred = knn_model.predict(X_test_scaled)
+    knn_metrics = {
+        'accuracy': accuracy_score(y_test, knn_pred),
+        'conf_matrix': confusion_matrix(y_test, knn_pred),
+        'report': classification_report(y_test, knn_pred, output_dict=True)
+    }
     
-    # Calculate metrics
-    acc_score = accuracy_score(y_test, y_pred)
-    conf_matrix = confusion_matrix(y_test, y_pred)
-    class_report = classification_report(y_test, y_pred, output_dict=True)
+    # 6. K-MEANS CLUSTERING (Scaled)
+    kmeans_model = KMeans(n_clusters=3, random_state=42)
+    kmeans_model.fit(X_scaled_all)
+    cluster_labels = kmeans_model.labels_
     
-    return rf_model, acc_score, conf_matrix, class_report, features
+    return rf_model, knn_model, kmeans_model, scaler, rf_metrics, knn_metrics, cluster_labels, features, num_features
 
 
 # ============================================================
@@ -589,6 +611,15 @@ def main():
             sel_activity = st.selectbox("Activity Status", activities)
         else:
             sel_activity = 'All'
+
+        st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
+        
+        # Model Selection
+        st.markdown("## 🤖 Model Selection")
+        selected_model = st.selectbox(
+            "Choose Analysis Model",
+            ["Random Forest", "K-Nearest Neighbors (KNN)", "K-Means Clustering"]
+        )
 
         st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
         st.markdown(
@@ -744,75 +775,130 @@ def main():
     st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
     
     # ========================================================
-    # CHURN PREDICTION MODULE
+    # MACHINE LEARNING & PREDICTION
     # ========================================================
-    # Train the ML model on the cleaned data
-    model, accuracy, conf_matrix, class_report, ml_features = train_churn_model(cleaned_df)
+    st.markdown("<p class='section-header'>🤖 Machine Learning Analysis</p>", unsafe_allow_html=True)
+    
+    # Train the ML models on the cleaned data
+    models = train_models(cleaned_df)
+    rf_model, knn_model, kmeans_model, scaler, rf_metrics, knn_metrics, cluster_labels, ml_features, num_features = models
+    
+    # Add cluster labels to dataframe for visualizations
+    cleaned_df['Cluster'] = cluster_labels
+    cleaned_df['Cluster'] = cleaned_df['Cluster'].map({0: 'Cluster A', 1: 'Cluster B', 2: 'Cluster C'})
 
-    st.markdown("<p class='section-header'>🔮 Predict Customer Churn</p>", unsafe_allow_html=True)
+    # Model Comparison Section
+    st.markdown("### Model Comparison")
     
-    st.markdown("""
-    Use the Machine Learning model (Random Forest) to predict whether a specific customer is likely to churn. 
-    The model was trained automatically on the uploaded dataset.
-    """)
+    comp_col1, comp_col2 = st.columns([1, 2])
     
-    # Display model metrics in an expander
-    with st.expander("📊 View Model Performance Metrics"):
-        st.write(f"**Accuracy Score:** {accuracy * 100:.2f}%")
-        st.write("**Classification Report:**")
-        st.dataframe(pd.DataFrame(class_report).transpose())
-        st.write("**Confusion Matrix:**")
-        st.write(conf_matrix)
+    with comp_col1:
+        st.dataframe(pd.DataFrame({
+            'Model': ['Random Forest', 'KNN'],
+            'Accuracy': [f"{rf_metrics['accuracy']*100:.2f}%", f"{knn_metrics['accuracy']*100:.2f}%"]
+        }), hide_index=True)
+        st.caption("ℹ️ K-Means is used for clustering and not directly comparable in accuracy.")
+        
+        # Simple Insight
+        best_model = "Random Forest" if rf_metrics['accuracy'] > knn_metrics['accuracy'] else "KNN"
+        st.info(f"💡 **Insight:** {best_model} performs better on this dataset.")
+        
+    with comp_col2:
+        comp_df = pd.DataFrame({
+            'Model': ['Random Forest', 'KNN'],
+            'Accuracy': [rf_metrics['accuracy'], knn_metrics['accuracy']]
+        })
+        fig_comp = px.bar(comp_df, x='Model', y='Accuracy', title='Accuracy Comparison',
+                         color='Model', color_discrete_sequence=['#FF6B6B', '#22a6b3'],
+                         text=comp_df['Accuracy'].apply(lambda x: f"{x*100:.1f}%"))
+        fig_comp.update_layout(yaxis_range=[0, 1], height=300, margin=dict(t=40, b=0, l=0, r=0), 
+                              paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#c8d6e5')
+        fig_comp.update_traces(textposition='outside')
+        st.plotly_chart(fig_comp, use_container_width=True)
 
-    # Input form for prediction
-    st.markdown("### Enter Customer Details")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        p_age = st.number_input("Age", min_value=18, max_value=100, value=30)
-        p_credit_score = st.number_input("Credit Score", min_value=300, max_value=850, value=600)
-        p_gender = st.selectbox("Gender", ["Male", "Female"])
+    st.markdown("---")
+
+    if selected_model in ["Random Forest", "K-Nearest Neighbors (KNN)"]:
+        st.markdown(f"### 🔮 Predict Customer Churn using {selected_model}")
         
-    with col2:
-        p_balance = st.number_input("Balance", min_value=0.0, value=50000.0)
-        p_tenure = st.number_input("Tenure (Years)", min_value=0, max_value=20, value=5)
-        p_products = st.selectbox("Number of Products", [1, 2, 3, 4])
+        metrics = rf_metrics if selected_model == "Random Forest" else knn_metrics
+        active_model = rf_model if selected_model == "Random Forest" else knn_model
         
-    with col3:
-        p_credit_card = st.radio("Has Credit Card?", ["Yes", "No"])
-        p_active = st.radio("Is Active Member?", ["Yes", "No"])
+        with st.expander(f"📊 View {selected_model} Performance Metrics"):
+            st.write(f"**Accuracy Score:** {metrics['accuracy'] * 100:.2f}%")
+            st.write("**Classification Report:**")
+            st.dataframe(pd.DataFrame(metrics['report']).transpose())
+            st.write("**Confusion Matrix:**")
+            st.write(metrics['conf_matrix'])
+
+        st.markdown("#### Enter Customer Details")
         
-    if st.button("Predict Churn Risk", type="primary"):
-        # Map inputs to match training data
-        input_data = {
-            'Credit Score': p_credit_score,
-            'Age': p_age,
-            'Tenure': p_tenure,
-            'Balance': p_balance,
-            'Products': p_products,
-            'Credit Card': 1 if p_credit_card == "Yes" else 0,
-            'Active Member': 1 if p_active == "Yes" else 0,
-            'Gender': 1 if p_gender == "Male" else 0
-        }
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            p_age = st.number_input("Age", min_value=18, max_value=100, value=30)
+            p_credit_score = st.number_input("Credit Score", min_value=300, max_value=850, value=600)
+            p_gender = st.selectbox("Gender", ["Male", "Female"])
+        with col2:
+            p_balance = st.number_input("Balance", min_value=0.0, value=50000.0)
+            p_tenure = st.number_input("Tenure (Years)", min_value=0, max_value=20, value=5)
+            p_products = st.selectbox("Number of Products", [1, 2, 3, 4])
+        with col3:
+            p_credit_card = st.radio("Has Credit Card?", ["Yes", "No"])
+            p_active = st.radio("Is Active Member?", ["Yes", "No"])
+            
+        if st.button("Predict Churn Risk", type="primary"):
+            input_data = {
+                'Credit Score': p_credit_score,
+                'Age': p_age,
+                'Tenure': p_tenure,
+                'Balance': p_balance,
+                'Products': p_products,
+                'Credit Card': 1 if p_credit_card == "Yes" else 0,
+                'Active Member': 1 if p_active == "Yes" else 0,
+                'Gender': 1 if p_gender == "Male" else 0
+            }
+            input_df = pd.DataFrame([input_data])[ml_features]
+            
+            # Apply scaling if KNN
+            if selected_model == "K-Nearest Neighbors (KNN)":
+                input_df[num_features] = scaler.transform(input_df[num_features])
+            
+            prediction = active_model.predict(input_df)[0]
+            prob = active_model.predict_proba(input_df)[0]
+            churn_prob = prob[1] * 100
+            
+            st.markdown("### Prediction Result")
+            if prediction == 1:
+                st.error(f"🚨 **High Risk: This customer is likely to churn.** (Probability: {churn_prob:.1f}%)")
+            else:
+                st.success(f"✅ **Low Risk: This customer is likely to stay.** (Churn Probability: {churn_prob:.1f}%)")
+
+    elif selected_model == "K-Means Clustering":
+        st.markdown("### 🧩 Customer Segmentation using K-Means")
+        st.markdown("We have grouped customers into 3 clusters based on their features. Let's analyse their behaviour.")
         
-        # Convert to DataFrame
-        input_df = pd.DataFrame([input_data])
+        # Scatter Plot
+        fig_cluster = px.scatter(cleaned_df, x='Balance', y='Credit Score', color='Cluster', 
+                                 title='Customer Clusters (Balance vs Credit Score)',
+                                 color_discrete_sequence=['#FF6B6B', '#22a6b3', '#f0932b'],
+                                 opacity=0.7)
+        fig_cluster.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#c8d6e5')
+        st.plotly_chart(fig_cluster, use_container_width=True)
         
-        # Ensure column order matches exactly
-        input_df = input_df[ml_features]
+        # Cluster Characteristics
+        st.markdown("#### Cluster Characteristics")
+        numeric_cols = ['Credit Score', 'Age', 'Tenure', 'Balance', 'Products']
+        cluster_summary = cleaned_df.groupby('Cluster')[numeric_cols].mean().round(2)
         
-        # Make prediction
-        prediction = model.predict(input_df)[0]
-        prob = model.predict_proba(input_df)[0]
-        churn_prob = prob[1] * 100
+        # Calculate churn percentage per cluster
+        churn_pct = cleaned_df.groupby('Cluster')['Churn Status'].apply(lambda x: (x == 'Yes').mean() * 100).round(1)
+        cluster_summary['Churn Rate (%)'] = churn_pct
         
-        st.markdown("### Prediction Result")
+        st.dataframe(cluster_summary, use_container_width=True)
         
-        if prediction == 1:
-            st.error(f"🚨 **High Risk: This customer is likely to churn.** (Probability: {churn_prob:.1f}%)")
-        else:
-            st.success(f"✅ **Low Risk: This customer is likely to stay.** (Churn Probability: {churn_prob:.1f}%)")
+        # Identify highest risk cluster
+        high_risk_cluster = cluster_summary['Churn Rate (%)'].idxmax()
+        st.warning(f"⚠️ **{high_risk_cluster}** is the highest risk segment with a churn rate of {cluster_summary.loc[high_risk_cluster, 'Churn Rate (%)']}%. These customers require immediate attention.")
 
     st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
     st.markdown(
