@@ -1,0 +1,25 @@
+# ============================================================
+# Streamlit Theme Configuration
+# This file customizes the look and feel of the Streamlit app.
+# Place this file inside a ".streamlit" folder in your project root.
+# ============================================================
+
+[theme]
+# Primary accent color used for interactive elements (buttons, sliders, etc.)
+primaryColor = "#FF6B6B"
+
+# Background color of the main content area
+backgroundColor = "#0E1117"
+
+# Background color of the sidebar
+secondaryBackgroundColor = "#1A1F2E"
+
+# Color used for text content
+textColor = "#FAFAFA"
+
+# Font family — options: "sans serif", "serif", "monospace"
+font = "sans serif"
+
+[server]
+# Maximum upload size in MB
+maxUploadSize = 200
