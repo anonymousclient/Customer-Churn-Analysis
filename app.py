@@ -338,6 +338,47 @@ def create_pie_chart(data, col, title):
     return fig
 
 
+def create_country_bar_chart(data, col, title):
+    """Create a horizontal bar chart for top 10 countries by churn count, grouping others."""
+    # Filter only churned customers
+    churned = data[data['Churn Status'] == 'Yes']
+    if churned.empty:
+        counts = data[col].value_counts().reset_index()
+    else:
+        counts = churned[col].value_counts().reset_index()
+    
+    counts.columns = [col, 'Count']
+    
+    # Top 10 countries
+    if len(counts) > 10:
+        top_10 = counts.iloc[:10]
+        others_count = counts.iloc[10:]['Count'].sum()
+        others_df = pd.DataFrame({col: ['Others'], 'Count': [others_count]})
+        chart_data = pd.concat([top_10, others_df], ignore_index=True)
+    else:
+        chart_data = counts
+        
+    # Sort ascending for horizontal bar chart (so largest is at the top)
+    chart_data = chart_data.sort_values(by='Count', ascending=True)
+
+    fig = px.bar(
+        chart_data, y=col, x='Count', orientation='h', title=title,
+        color_discrete_sequence=['#6366F1'], text='Count'
+    )
+    fig.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font_color='#E5E7EB',
+        title_font_size=16,
+        title_font_color='#E5E7EB',
+        margin=dict(t=30, b=20, l=20, r=20),
+        xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)'),
+        yaxis=dict(showgrid=False)
+    )
+    fig.update_traces(textposition='outside', textfont_size=12)
+    return fig
+
+
 # ============================================================
 # INSIGHT GENERATION
 # ============================================================
@@ -718,7 +759,7 @@ def main():
                     use_container_width=True
                 )
 
-        # Row 3: Activity Status + Country
+        # Row 3: Activity Status
         c5, c6 = st.columns(2)
         with c5:
             if 'Active Member' in filtered_df.columns:
@@ -727,15 +768,20 @@ def main():
                                     '🏃 Churn by Activity Status'),
                     use_container_width=True
                 )
-        with c6:
-            if 'Country' in filtered_df.columns:
-                st.plotly_chart(
-                    create_pie_chart(filtered_df, 'Country',
-                                    '🌍 Churn Distribution by Country'),
-                    use_container_width=True
-                )
 
     st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
+    
+    # ========================================================
+    # FULL WIDTH CHARTS
+    # ========================================================
+    if 'Country' in filtered_df.columns:
+        st.markdown("<p class='section-header'>🌍 Churn Distribution by Country</p>",
+                    unsafe_allow_html=True)
+        st.plotly_chart(
+            create_country_bar_chart(filtered_df, 'Country', ''),
+            use_container_width=True
+        )
+        st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
 
     # ========================================================
     # INSIGHTS SECTION
